@@ -13,7 +13,9 @@ def test_class():
     assert BaseNodePostprocessor.__name__ in names_of_base_classes
 
 
-@pytest.mark.integration()
+@pytest.mark.skipif(
+    os.environ.get("MXBAI_API_KEY") is None, reason="Mixedbread AI API key required"
+)
 def test_accuracy():
     texts = ["Mockingbird", "Moby-Dick"]
     query = "Moby-Dick"

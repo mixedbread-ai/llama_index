@@ -25,7 +25,7 @@ def test_sync_embedding():
         truncation_strategy=TruncationStrategy.START,
     )
 
-    emb.get_query_embedding("I love Mixedbread AI!")
+    emb.get_query_embedding("Who is german and likes bread?")
 
 
 @pytest.mark.skipif(
@@ -40,4 +40,4 @@ async def test_async_embedding():
         truncation_strategy=TruncationStrategy.START,
     )
 
-    await emb.aget_query_embedding("I love Mixedbread AI!")
+    await emb.aget_query_embedding("Who is german and likes bread?")
