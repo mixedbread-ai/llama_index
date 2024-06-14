@@ -10,6 +10,8 @@ from llama_index.core.instrumentation.events.rerank import (
 )
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import NodeWithScore, QueryBundle, MetadataMode
+from mixedbread_ai.core import RequestOptions
+from mixedbread_ai.client import MixedbreadAI
 
 dispatcher = get_dispatcher(__name__)
 
@@ -19,12 +21,14 @@ class MixedbreadAIRerank(BaseNodePostprocessor):
     top_n: int = Field(description="Top N nodes to return.")
 
     _client: Any = PrivateAttr()
+    _request_options: Optional[RequestOptions] = PrivateAttr()
 
     def __init__(
         self,
         top_n: int = 2,
         model: str = "mixedbread-ai/mxbai-rerank-large-v1",
         api_key: Optional[str] = None,
+        max_retries: Optional[int] = None,
     ):
         try:
             api_key = api_key or os.environ["MXBAI_API_KEY"]
@@ -33,14 +37,12 @@ class MixedbreadAIRerank(BaseNodePostprocessor):
                 "Must pass in Mixedbread AI API key or "
                 "specify via MXBAI_API_KEY environment variable "
             )
-        try:
-            from mixedbread_ai.client import MixedbreadAI
-        except ImportError:
-            raise ImportError(
-                "Cannot import mixedbread_ai package, please `pip install mixedbread-ai`."
-            )
 
         self._client = MixedbreadAI(api_key=api_key)
+        self._request_options = (
+            RequestOptions(max_retries=max_retries) if max_retries is not None else None
+        )
+
         super().__init__(top_n=top_n, model=model)
 
     @classmethod
@@ -82,6 +84,7 @@ class MixedbreadAIRerank(BaseNodePostprocessor):
                 input=texts,
                 top_k=self.top_n,
                 return_input=False,
+                request_options=self._request_options,
             )
 
             new_nodes = []

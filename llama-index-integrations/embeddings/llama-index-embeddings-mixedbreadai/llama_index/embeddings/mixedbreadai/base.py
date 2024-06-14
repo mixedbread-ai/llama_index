@@ -1,4 +1,5 @@
 import logging
+import os
 from typing import Any, List, Optional
 
 import httpx
@@ -7,6 +8,7 @@ from llama_index.core.bridge.pydantic import Field, PrivateAttr
 from llama_index.core.callbacks.base import CallbackManager
 from mixedbread_ai import TruncationStrategy
 from mixedbread_ai.client import MixedbreadAI, AsyncMixedbreadAI
+from mixedbread_ai.core import RequestOptions
 from mixedbread_ai.types import EncodingFormat
 
 logger = logging.getLogger(__name__)
@@ -48,9 +50,7 @@ class MixedbreadAIEmbedding(BaseEmbedding):
 
     _client: MixedbreadAI = PrivateAttr()
     _async_client: AsyncMixedbreadAI = PrivateAttr()
-    _timeout: Optional[float] = PrivateAttr()
-    _httpx_client: Optional[httpx.Client] = PrivateAttr()
-    _httpx_async_client: Optional[httpx.AsyncClient] = PrivateAttr()
+    _request_options: Optional[RequestOptions] = PrivateAttr()
 
     def __init__(
         self,
@@ -64,12 +64,21 @@ class MixedbreadAIEmbedding(BaseEmbedding):
         embed_batch_size: Optional[int] = None,
         callback_manager: Optional[CallbackManager] = None,
         timeout: Optional[float] = None,
+        max_retries: Optional[int] = None,
         httpx_client: Optional[httpx.Client] = None,
         httpx_async_client: Optional[httpx.AsyncClient] = None,
         **kwargs: Any,
     ):
         if embed_batch_size is None:
             embed_batch_size = 32  # Default batch size for Mixedbread AI
+
+        try:
+            api_key = api_key or os.environ["MXBAI_API_KEY"]
+        except KeyError:
+            raise ValueError(
+                "Must pass in Mixedbread AI API key or "
+                "specify via MXBAI_API_KEY environment variable "
+            )
 
         super().__init__(
             api_key=api_key,
@@ -89,6 +98,10 @@ class MixedbreadAIEmbedding(BaseEmbedding):
         )
         self._async_client = AsyncMixedbreadAI(
             api_key=api_key, timeout=timeout, httpx_client=httpx_async_client
+        )
+
+        self._request_options = (
+            RequestOptions(max_retries=max_retries) if max_retries is not None else None
         )
 
     @classmethod
@@ -113,6 +126,7 @@ class MixedbreadAIEmbedding(BaseEmbedding):
             truncation_strategy=self.truncation_strategy,
             dimensions=self.dimensions,
             prompt=self.prompt,
+            request_options=self._request_options,
         )
         return [item.embedding for item in response.data]
 
@@ -133,6 +147,8 @@ class MixedbreadAIEmbedding(BaseEmbedding):
             normalized=self.normalized,
             truncation_strategy=self.truncation_strategy,
             dimensions=self.dimensions,
+            prompt=self.prompt,
+            request_options=self._request_options,
         )
         return [item.embedding for item in response.data]
 
