@@ -25,7 +25,7 @@ class MixedbreadAIRerank(BaseNodePostprocessor):
 
     def __init__(
         self,
-        top_n: int = 2,
+        top_n: int = 10,
         model: str = "mixedbread-ai/mxbai-rerank-large-v1",
         api_key: Optional[str] = None,
         max_retries: Optional[int] = None,
